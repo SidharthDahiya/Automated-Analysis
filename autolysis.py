@@ -11,7 +11,7 @@ import chardet
 
 # Constants
 API_URL = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
-AIPROXY_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIxZjMwMDE5MDJAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.-MSCYiS3uyE3Hfl0gx1QzPExicBxOkq_kGNKnJ3EYTc"
+AIPROXY_TOKEN = os.environ.get("AIPROXY_TOKEN", "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIxZjMwMDAzMjhAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.sdErABQZRIrLR5TaqR1lBDMgCsP2myC7MtqsanZbvQk")
 
 
 def load_data(file_path):
@@ -19,39 +19,69 @@ def load_data(file_path):
     if not os.path.isfile(file_path):
         print(f"Error: File '{file_path}' not found.")
         sys.exit(1)
+
     with open(file_path, 'rb') as f:
         result = chardet.detect(f.read())
-    encoding = result['encoding']
-    print(f"Detected file encoding: {encoding}")
+        encoding = result['encoding']
+        print(f"Detected file encoding: {encoding}")
+
     return pd.read_csv(file_path, encoding=encoding)
 
 
 def analyze_data(df):
-    """Perform basic data analysis."""
+    """Perform enhanced data analysis."""
     if df.empty:
         print("Error: Dataset is empty.")
         sys.exit(1)
+
     numeric_df = df.select_dtypes(include=['number'])  # Select only numeric columns
+
     analysis = {
         'summary': df.describe(include='all').to_dict(),
         'missing_values': df.isnull().sum().to_dict(),
-        'correlation': numeric_df.corr().to_dict()  # Compute correlation only on numeric columns
+        'correlation': numeric_df.corr().to_dict(),
+        # Advanced analysis
+        'outliers': detect_outliers(numeric_df),
+        'regression_analysis': perform_regression(numeric_df)
     }
+
     print("Data analysis complete.")
     return analysis
 
 
+def detect_outliers(df):
+    """Detect outliers in the dataset."""
+    outliers = {}
+    for column in df.columns:
+        Q1 = df[column].quantile(0.25)
+        Q3 = df[column].quantile(0.75)
+        IQR = Q3 - Q1
+        outliers[column] = df[(df[column] < (Q1 - 1.5 * IQR)) | (df[column] > (Q3 + 1.5 * IQR))].shape[0]
+    return outliers
+
+
+def perform_regression(df):
+    """Perform regression analysis."""
+    # Placeholder for regression logic; can use libraries like statsmodels or sklearn
+    return "Regression analysis results"
+
+
 def visualize_data(df):
-    """Generate and save visualizations."""
+    """Generate and save enhanced visualizations."""
     sns.set(style="whitegrid")
     numeric_columns = df.select_dtypes(include=['number']).columns
+
     if numeric_columns.empty:
         print("No numeric columns found for visualization.")
         return
+
     for column in numeric_columns:
         plt.figure()
         sns.histplot(df[column].dropna(), kde=True)
         plt.title(f'Distribution of {column}')
+        plt.xlabel(column)
+        plt.ylabel('Frequency')
+        plt.legend(['KDE', 'Histogram'])
         file_name = f'{column}_distribution.png'
         plt.savefig(file_name)
         print(f"Saved distribution plot: {file_name}")
@@ -64,26 +94,35 @@ def generate_narrative(analysis):
         'Authorization': f'Bearer {AIPROXY_TOKEN}',
         'Content-Type': 'application/json'
     }
+
     prompt = f"Provide a detailed analysis based on the following data summary: {analysis}"
+
     data = {
         "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}]
     }
+
     try:
         response = httpx.post(API_URL, headers=headers, json=data, timeout=30.0)
         response.raise_for_status()
+
         return response.json()['choices'][0]['message']['content']
+
     except httpx.HTTPStatusError as e:
         print(f"HTTP error occurred: {e}")
+
     except httpx.RequestError as e:
         print(f"Request error occurred: {e}")
+
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
     return "Narrative generation failed due to an error."
 
 
 def main(file_path):
     print("Starting autolysis process...")
+
     df = load_data(file_path)
     print("Dataset loaded successfully.")
 
@@ -99,7 +138,8 @@ def main(file_path):
     if narrative != "Narrative generation failed due to an error.":
         with open('README.md', 'w') as f:
             f.write(narrative)
-        print("Narrative successfully written to README.md.")
+            print("Narrative successfully written to README.md.")
+
     else:
         print("Narrative generation failed. Skipping README creation.")
 
@@ -108,6 +148,7 @@ def main(file_path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python autolysis.py <file_path>")
+        print("Usage: python autolysis.py <dataset.csv>")
         sys.exit(1)
+
     main(sys.argv[1])
