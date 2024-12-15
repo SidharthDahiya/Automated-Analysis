@@ -14,7 +14,6 @@ import sys
 import pandas as pd
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import httpx
@@ -22,8 +21,10 @@ import chardet
 
 # Constants
 API_URL = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
-AIPROXY_TOKEN = os.environ.get("AI_PROXY", "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIxZjMwMDAzMjhAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.sdErABQZRIrLR5TaqR1lBDMgCsP2myC7MtqsanZbvQk")
+AIPROXY_TOKEN = os.environ.get("AI_PROXY", "")
 
+if not AIPROXY_TOKEN:
+    raise ValueError("AIPROXY_TOKEN is not set. Please set it before running the script.")
 
 def load_data(file_path):
     """Load CSV data with encoding detection."""
@@ -38,7 +39,6 @@ def load_data(file_path):
 
     return pd.read_csv(file_path, encoding=encoding)
 
-
 def analyze_data(df):
     """Perform enhanced data analysis."""
     if df.empty:
@@ -51,31 +51,10 @@ def analyze_data(df):
         'summary': df.describe(include='all').to_dict(),
         'missing_values': df.isnull().sum().to_dict(),
         'correlation': numeric_df.corr().to_dict(),
-        # Advanced analysis
-        'outliers': detect_outliers(numeric_df),
-        'regression_analysis': perform_regression(numeric_df)
     }
 
     print("Data analysis complete.")
     return analysis
-
-
-def detect_outliers(df):
-    """Detect outliers in the dataset."""
-    outliers = {}
-    for column in df.columns:
-        Q1 = df[column].quantile(0.25)
-        Q3 = df[column].quantile(0.75)
-        IQR = Q3 - Q1
-        outliers[column] = df[(df[column] < (Q1 - 1.5 * IQR)) | (df[column] > (Q3 + 1.5 * IQR))].shape[0]
-    return outliers
-
-
-def perform_regression(df):
-    """Perform regression analysis."""
-    # Placeholder for regression logic; can use libraries like statsmodels or sklearn
-    return "Regression analysis results"
-
 
 def visualize_data(df):
     """Generate and save enhanced visualizations."""
@@ -98,19 +77,24 @@ def visualize_data(df):
         print(f"Saved distribution plot: {file_name}")
         plt.close()
 
-
 def generate_narrative(analysis):
-    """Generate narrative using LLM."""
+    """Generate narrative using LLM with optimized prompts."""
     headers = {
         'Authorization': f'Bearer {AIPROXY_TOKEN}',
         'Content-Type': 'application/json'
     }
 
-    prompt = f"Provide a detailed analysis based on the following data summary: {analysis}"
+    # Use a concise prompt to minimize token usage
+    prompt = (
+        f"Summarize the following data analysis results:\n"
+        f"Summary Statistics: {analysis['summary']}\n"
+        f"Missing Values: {analysis['missing_values']}\n"
+        f"Correlation Matrix: {analysis['correlation']}\n"
+    )
 
     data = {
         "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt}]
+        "messages": [{"role": "user", "content": prompt}],
     }
 
     try:
@@ -129,7 +113,6 @@ def generate_narrative(analysis):
         print(f"An unexpected error occurred: {e}")
 
     return "Narrative generation failed due to an error."
-
 
 def main(file_path):
     print("Starting autolysis process...")
@@ -156,10 +139,9 @@ def main(file_path):
 
     print("Autolysis process completed.")
 
-
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python autolysis.py <dataset.csv>")
+        print("Usage: uv run autolysis.py <dataset.csv>")
         sys.exit(1)
 
     main(sys.argv[1])
