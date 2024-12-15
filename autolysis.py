@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import httpx
 import chardet
 from sklearn.cluster import KMeans
+from sklearn.impute import SimpleImputer
 from sklearn.ensemble import IsolationForest
 from pathlib import Path
 
@@ -47,28 +48,36 @@ def load_data(file_path):
     return pd.read_csv(file_path, encoding=encoding)
 
 
+def preprocess_data(df):
+    """Preprocess data by handling missing values."""
+    numeric_df = df.select_dtypes(include=['number'])
+    imputer = SimpleImputer(strategy='mean')
+    numeric_df_imputed = pd.DataFrame(imputer.fit_transform(numeric_df), columns=numeric_df.columns)
+    return numeric_df_imputed
+
+
 def analyze_data(df):
     """Perform enhanced data analysis including clustering and anomaly detection."""
     if df.empty:
         print("Error: Dataset is empty.")
         sys.exit(1)
 
-    numeric_df = df.select_dtypes(include=['number'])
+    numeric_df_imputed = preprocess_data(df)
 
     # Basic analysis
     analysis = {
         'summary': df.describe(include='all').to_dict(),
         'missing_values': df.isnull().sum().to_dict(),
-        'correlation': numeric_df.corr().to_dict() if not numeric_df.empty else {}
+        'correlation': numeric_df_imputed.corr().to_dict()
     }
 
     # Advanced analysis: Clustering and Anomaly Detection
-    if not numeric_df.empty:
-        kmeans = KMeans(n_clusters=3, random_state=0).fit(numeric_df)
+    if not numeric_df_imputed.empty:
+        kmeans = KMeans(n_clusters=3, random_state=0).fit(numeric_df_imputed)
         analysis['clusters'] = kmeans.labels_.tolist()
 
         iso_forest = IsolationForest(contamination=0.1, random_state=0)
-        analysis['anomalies'] = iso_forest.fit_predict(numeric_df).tolist()
+        analysis['anomalies'] = iso_forest.fit_predict(numeric_df_imputed).tolist()
 
     print("Data analysis complete.")
     return analysis
