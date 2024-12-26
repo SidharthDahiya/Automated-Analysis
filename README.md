@@ -36,12 +36,11 @@ The script (`autolysis.py`) accepts a single CSV file as input and performs the 
   
 ## Setup Instructions
 ### Prerequisites
-- Python 3.x installed on your system.
-- Required libraries: `pandas`, `seaborn`, `matplotlib`, `httpx`, `chardet`.
+Python 3.x installed on your system.
 
 Install dependencies using:
 ```bash
-pip install pandas seaborn matplotlib httpx chardet
+pip install pandas seaborn matplotlib numpy scipy openai scikit-learn requests ipykernel chardet
 ```
 Usage
 Set Environment Variable**: Ensure your AI Proxy token is set as an environment variable.
