@@ -36,14 +36,14 @@ The script (`autolysis.py`) accepts a single CSV file as input and performs the 
   
 ## Setup Instructions
 ### Prerequisites
-Python 3.x installed on your system.
+- Python 3.x installed on your system.
 
-Install dependencies using:
+- Install dependencies using:
 ```bash
 pip install pandas seaborn matplotlib numpy scipy openai scikit-learn requests ipykernel chardet
 ```
-Usage
-Set Environment Variable**: Ensure your AI Proxy token is set as an environment variable.
+
+Set Environment Variable: Ensure your AI Proxy token is set as an environment variable.
    ```bash
    export AIPROXY_TOKEN="your_actual_token"
 ```
